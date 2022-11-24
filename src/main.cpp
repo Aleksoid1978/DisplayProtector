@@ -2,10 +2,12 @@
 #include <windows.h>
 #endif
 
-#include <SDL.h>
 #include <list>
 #include <string>
 #include <iostream>
+
+#define SDL_MAIN_HANDLED
+#include <SDL.h>
 
 constexpr auto szUsage = "Параметры командной строки:\n"
 						 "  --monitor=N\tНомер монитора(экрана), начиная с 1\n"
