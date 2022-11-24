@@ -24,6 +24,8 @@ else()
   set(SDL_SHARED ON CACHE BOOL "Build SDL2 as shared lib")
 endif()
 
+set(SDL_TEST OFF CACHE BOOL "Build the SDL2_test library")
+
 FetchContent_MakeAvailable(SDL)
 
 # Define alias for what we used
