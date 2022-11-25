@@ -8,6 +8,7 @@
 
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
+#include <SDL_image.h>
 
 constexpr auto szUsage = "Параметры командной строки:\n"
 						 "  --monitor=N\tНомер монитора(экрана), начиная с 1\n"
@@ -153,6 +154,11 @@ int main (int argc, char** args)
 								   (bStart ? SDL_WINDOW_SHOWN : SDL_WINDOW_HIDDEN) | SDL_WINDOW_BORDERLESS | SDL_WINDOW_ALWAYS_ON_TOP);
 	if (!window) {
 		return -1;
+	}
+
+	if (auto icon = IMG_Load("DisplayProtector.png")) {
+		SDL_SetWindowIcon(window, icon);
+		SDL_FreeSurface(icon);
 	}
 
 	HorizontalGradient(SDL_GetWindowSurface(window));

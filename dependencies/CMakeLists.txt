@@ -1,37 +1,38 @@
 include(FetchContent)
 
-option(LINK_DEPS_STATIC CACHE ON)
+set(BUILD_SHARED_LIBS OFF)
 
-if(LINK_DEPS_STATIC)
-  set(BUILD_SHARED_LIBS OFF)
-else()
-  set(BUILD_SHARED_LIBS ON)
-endif()
-
-#======================================
+# sdl2
 FetchContent_Declare(
-  SDL
-  GIT_REPOSITORY "https://github.com/libsdl-org/SDL"
-  GIT_TAG        "release-2.26.x"
+    SDL2
+    GIT_REPOSITORY  "https://github.com/libsdl-org/SDL"
+    GIT_TAG         "release-2.26.x"
 )
-#======================================
 
-# SDL
-if (LINK_DEPS_STATIC)
-  set(SDL_STATIC ON CACHE BOOL "Build SDL2 as shared lib")
-  set(SDL_FORCE_STATIC_VCRT ON CACHE BOOL "Build SDL2 as shared lib")
-else()
-  set(SDL_SHARED ON CACHE BOOL "Build SDL2 as shared lib")
-endif()
+# sdl2_image
+FetchContent_Declare(
+    SDL2_IMAGE
+    GIT_REPOSITORY  "https://github.com/libsdl-org/SDL_image"
+    GIT_TAG         "release-2.6.x"
+)
 
+set(BUILD_SHARED_LIBS OFF)
+set(SDL_STATIC ON CACHE BOOL "Build SDL2 as static lib")
+set(SDL_FORCE_STATIC_VCRT ON CACHE BOOL "Build SDL2 as static lib")
 set(SDL_TEST OFF CACHE BOOL "Build the SDL2_test library")
 set(SDL2_DISABLE_SDL2MAIN ON CACHE BOOL "Disable building/installation of SDL2main")
 
-FetchContent_MakeAvailable(SDL)
+set(SDL2IMAGE_SAMPLES OFF CACHE BOOL "Build the SDL2_image sample program(s)")
+set(SDL2IMAGE_INSTALL OFF CACHE BOOL "Enable SDL2_image install target")
 
-# Define alias for what we used
-if (LINK_DEPS_STATIC)
-  add_library(SDL2::SDL2 ALIAS SDL2-static)
-else()
-  add_library(SDL2::SDL2 ALIAS SDL2)
+FetchContent_MakeAvailable(SDL2 SDL2_IMAGE)
+
+set(SDL_LIBRARIES SDL2-static SDL2_image PARENT_SCOPE)
+
+if(MSVC)
+    target_compile_options(SDL2_image PRIVATE
+        "$<$<CONFIG:Debug>:/MTd>"
+        "$<$<CONFIG:Release>:/MT>"
+    )
 endif()
+
