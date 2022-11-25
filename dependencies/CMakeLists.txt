@@ -19,11 +19,11 @@ FetchContent_Declare(
 set(BUILD_SHARED_LIBS OFF)
 set(SDL_STATIC ON CACHE BOOL "Build SDL2 as static lib")
 set(SDL_FORCE_STATIC_VCRT ON CACHE BOOL "Build SDL2 as static lib")
-set(SDL_TEST OFF CACHE BOOL "Build the SDL2_test library")
+set(SDL_TEST OFF CACHE BOOL "Disable building the SDL2_test library")
 set(SDL2_DISABLE_SDL2MAIN ON CACHE BOOL "Disable building/installation of SDL2main")
 
-set(SDL2IMAGE_SAMPLES OFF CACHE BOOL "Build the SDL2_image sample program(s)")
-set(SDL2IMAGE_INSTALL OFF CACHE BOOL "Enable SDL2_image install target")
+set(SDL2IMAGE_SAMPLES OFF CACHE BOOL "Disable building the SDL2_image sample program(s)")
+set(SDL2IMAGE_INSTALL OFF CACHE BOOL "Disable SDL2_image install target")
 
 FetchContent_MakeAvailable(SDL2 SDL2_IMAGE)
 
