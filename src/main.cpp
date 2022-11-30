@@ -26,7 +26,7 @@ static void HorizontalGradient(SDL_Surface* surf)
 	static const SDL_Color c2 = { 0xFF, 0xFF, 0xFF };
 
 	Uint8 r, g, b;
-	SDL_Rect dest;
+	SDL_Rect dest = {};
 
 	auto width = surf->w;
 	auto height = surf->h;
@@ -41,7 +41,7 @@ static void HorizontalGradient(SDL_Surface* surf)
 		dest.w = 1;
 		dest.h = height;
 
-		auto color = SDL_MapRGB(surf->format, r, g, b);
+		auto color = SDL_MapRGBA(surf->format, r, g, b, 0);
 
 		SDL_FillRect(surf, &dest, color);
 	}
@@ -149,20 +149,56 @@ int main (int argc, char** args)
 	auto all_width = width + displayBound.w;
 	auto timer_movement_period = display_time / all_width;
 
-	auto window = SDL_CreateWindow("Display Protector",
-								   displayBound.x, displayBound.y, 1, displayBound.h,
-								   (bStart ? SDL_WINDOW_SHOWN : SDL_WINDOW_HIDDEN) | SDL_WINDOW_BORDERLESS | SDL_WINDOW_ALWAYS_ON_TOP);
-	if (!window) {
+#ifdef _WIN32
+	SDL_SetHintWithPriority(SDL_HINT_RENDER_DRIVER, "direct3d11", SDL_HINT_OVERRIDE);
+#endif
+	std::unique_ptr<SDL_Window, decltype(&SDL_DestroyWindow)> pSDL_Window(
+		SDL_CreateWindow("Display Protector",
+						 displayBound.x, displayBound.y, 1, displayBound.h,
+						 (bStart ? SDL_WINDOW_SHOWN : SDL_WINDOW_HIDDEN) | SDL_WINDOW_BORDERLESS | SDL_WINDOW_ALWAYS_ON_TOP),
+		SDL_DestroyWindow);
+	if (!pSDL_Window) {
+		std::cout << "SDL_CreateWindow() error - " << SDL_GetError() << std::endl;
+		return -1;
+	}
+
+	std::unique_ptr<SDL_Renderer, decltype(&SDL_DestroyRenderer)> pSDL_Renderer(
+		SDL_CreateRenderer(pSDL_Window.get(), -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC),
+		SDL_DestroyRenderer);
+	if (!pSDL_Window) {
+		std::cout << "SDL_CreateRenderer() error - " << SDL_GetError() << std::endl;
 		return -1;
 	}
 
 	if (auto icon = IMG_Load("DisplayProtector.png")) {
-		SDL_SetWindowIcon(window, icon);
+		SDL_SetWindowIcon(pSDL_Window.get(), icon);
 		SDL_FreeSurface(icon);
 	}
 
-	HorizontalGradient(SDL_GetWindowSurface(window));
-	SDL_UpdateWindowSurface(window);
+	std::unique_ptr<SDL_Surface, decltype(&SDL_FreeSurface)> pSDL_Surface(
+		SDL_CreateRGBSurfaceWithFormat(0, width, displayBound.h, 32, SDL_PIXELFORMAT_ARGB8888),
+		SDL_FreeSurface);
+	if (!pSDL_Surface) {
+		std::cout << "SDL_CreateRGBSurfaceWithFormat() error - " << SDL_GetError() << std::endl;
+		return -1;
+	}
+
+	std::unique_ptr<SDL_Texture, decltype(&SDL_DestroyTexture)> pSDL_Texture(
+		SDL_CreateTexture(pSDL_Renderer.get(), pSDL_Surface->format->format,
+						  SDL_TEXTUREACCESS_STREAMING, pSDL_Surface->w, pSDL_Surface->h),
+		SDL_DestroyTexture);
+	if (!pSDL_Texture) {
+		std::cout << "SDL_CreateTexture() error - " << SDL_GetError() << std::endl;
+		return -1;
+	}
+
+	HorizontalGradient(pSDL_Surface.get());
+	SDL_UpdateTexture(pSDL_Texture.get(), nullptr, pSDL_Surface->pixels, pSDL_Surface->pitch);
+	pSDL_Surface.reset();
+
+	SDL_RenderClear(pSDL_Renderer.get());
+	SDL_RenderCopy(pSDL_Renderer.get(), pSDL_Texture.get(), nullptr, nullptr);
+	SDL_RenderPresent(pSDL_Renderer.get());
 
 	bool bGetStartPos = false;
 	SDL_Rect startPos = {};
@@ -190,16 +226,16 @@ int main (int argc, char** args)
 				switch (event.user.code) {
 					case timerCodeStartMovement:
 						SDL_RemoveTimer(timerStartMovementID);
-						SDL_SetWindowPosition(window, 0, 0);
-						//SDL_ShowWindow(window);
-						//SDL_RaiseWindow(window);
+						SDL_SetWindowPosition(pSDL_Window.get(), 0, 0);
+						SDL_ShowWindow(pSDL_Window.get());
+						SDL_RaiseWindow(pSDL_Window.get());
 						timerMovementID = SDL_AddTimer(timer_movement_period,
 													   timerCallback,
 													   reinterpret_cast<void*>(const_cast<Sint32*>(&timerCodeMovement)));
 						break;
 					case timerCodeMovement:
 						SDL_Rect pos = {};
-						SDL_GetWindowPosition(window, &pos.x, &pos.y);
+						SDL_GetWindowPosition(pSDL_Window.get(), &pos.x, &pos.y);
 
 						if (!bGetStartPos) {
 							startPos = pos;
@@ -207,33 +243,34 @@ int main (int argc, char** args)
 						}
 
 						SDL_Rect size = {};
-						SDL_GetWindowSize(window, &size.x, &size.y);
+						SDL_GetWindowSize(pSDL_Window.get(), &size.x, &size.y);
 
 						if (size.x < width && pos.x == startPos.x) {
 							size.x += 1;
-							SDL_SetWindowSize(window, size.x, size.y);
+							SDL_SetWindowSize(pSDL_Window.get(), size.x, size.y);
 
-							HorizontalGradient(SDL_GetWindowSurface(window));
-							SDL_UpdateWindowSurface(window);
+							SDL_RenderClear(pSDL_Renderer.get());
+							SDL_RenderCopy(pSDL_Renderer.get(), pSDL_Texture.get(), nullptr, nullptr);
+							SDL_RenderPresent(pSDL_Renderer.get());
 						} else {
 							if (pos.x + size.x == displayRight) {
 								size.x -= 1;
 								if (size.x == 0) {
 									SDL_RemoveTimer(timerMovementID);
-									//SDL_HideWindow(window);
 									timerStartMovementID = SDL_AddTimer(timer_start_movement_period,
 																		timerCallback,
 																		reinterpret_cast<void*>(const_cast<Sint32*>(&timerCodeStartMovement)));
 									break;
 								}
-								SDL_SetWindowSize(window, size.x, size.y);
+								SDL_SetWindowSize(pSDL_Window.get(), size.x, size.y);
 
-								HorizontalGradient(SDL_GetWindowSurface(window));
-								SDL_UpdateWindowSurface(window);
+								SDL_RenderClear(pSDL_Renderer.get());
+								SDL_RenderCopy(pSDL_Renderer.get(), pSDL_Texture.get(), nullptr, nullptr);
+								SDL_RenderPresent(pSDL_Renderer.get());
 							}
 
 							pos.x += 1;
-							SDL_SetWindowPosition(window, pos.x, pos.y);
+							SDL_SetWindowPosition(pSDL_Window.get(), pos.x, pos.y);
 						}
 						break;
 				}
@@ -248,7 +285,9 @@ int main (int argc, char** args)
 	SDL_RemoveTimer(timerStartMovementID);
 	SDL_RemoveTimer(timerMovementID);
 
-	SDL_DestroyWindow(window);
+	pSDL_Texture.reset();
+	pSDL_Renderer.reset();
+	pSDL_Window.reset();
 	SDL_Quit();
 
 	return 0;
