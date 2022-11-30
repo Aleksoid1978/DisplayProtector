@@ -5,6 +5,7 @@
 #include <list>
 #include <string>
 #include <iostream>
+#include <memory>
 
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
