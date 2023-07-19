@@ -1,19 +1,15 @@
 include(FetchContent)
 
-set(BUILD_SHARED_LIBS OFF)
-
-# sdl2
 FetchContent_Declare(
     SDL2
     GIT_REPOSITORY  "https://github.com/libsdl-org/SDL"
-    GIT_TAG         "release-2.26.x"
+    GIT_TAG         "release-2.28.1"
 )
 
-# sdl2_image
 FetchContent_Declare(
     SDL2_IMAGE
     GIT_REPOSITORY  "https://github.com/libsdl-org/SDL_image"
-    GIT_TAG         "release-2.6.x"
+    GIT_TAG         "release-2.6.3"
 )
 
 set(BUILD_SHARED_LIBS OFF)

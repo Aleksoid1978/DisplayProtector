@@ -217,6 +217,11 @@ int main (int argc, char** args)
 											reinterpret_cast<void*>(const_cast<Sint32*>(&timerCodeStartMovement)));
 	}
 
+#ifdef _WIN32
+		SetConsoleOutputCP(65001);
+		std::cout << "Ctrl+X для выхода." << std::endl;
+#endif
+
 	for (;;) {
 		SDL_Event event;
 		if (SDL_PollEvent(&event)) {
